@@ -1,0 +1,1199 @@
+---
+title: "Analisis Database Sakila"
+author: "Angelica Ardilla"
+date: "25 Mei 2026"
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    number_sections: true
+    df_print: paged
+    code_folding: show
+---
+
+```{css, echo=FALSE}
+/* ── IMPORT FONT ─────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Sans+3:wght@300;400;600&family=Fira+Code:wght@400;500&display=swap');
+
+/* ── CSS VARIABLES ───────────────────────────────────── */
+:root {
+  --navy:      #0d1b2a;
+  --navy-mid:  #1b2f45;
+  --teal:      #0f7b6c;
+  --teal-light:#14a899;
+  --gold:      #c8922a;
+  --gold-light:#f0b840;
+  --cream:     #faf8f2;
+  --white:     #ffffff;
+  --gray-soft: #f4f4f0;
+  --gray-mid:  #9e9e9e;
+  --text-dark: #1a1a2e;
+  --text-body: #333344;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-md: 0 6px 24px rgba(0,0,0,0.12);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.18);
+  --radius:    10px;
+  --radius-lg: 18px;
+}
+
+/* ── BASE ────────────────────────────────────────────── */
+body {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--text-body);
+  background-color: var(--cream);
+  margin: 0;
+}
+
+/* ── HERO HEADER ─────────────────────────────────────── */
+.hero-banner {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 50%, #0e3d5c 100%);
+  color: var(--white);
+  padding: 60px 48px 50px;
+  margin: -24px -24px 40px -24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 320px; height: 320px;
+  background: radial-gradient(circle, rgba(200,146,42,0.18) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.hero-banner::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; left: -40px;
+  width: 280px; height: 280px;
+  background: radial-gradient(circle, rgba(15,123,108,0.20) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.8em;
+  font-weight: 900;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+
+.hero-title span {
+  color: var(--gold-light);
+}
+
+.hero-subtitle {
+  font-size: 1.05em;
+  font-weight: 300;
+  opacity: 0.85;
+  margin: 0 0 28px 0;
+  letter-spacing: 0.3px;
+}
+
+.hero-meta {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.hero-badge {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 50px;
+  padding: 6px 18px;
+  font-size: 0.82em;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(4px);
+}
+
+.hero-badge.gold {
+  background: rgba(200,146,42,0.25);
+  border-color: var(--gold);
+  color: var(--gold-light);
+}
+
+/* ── TOC ─────────────────────────────────────────────── */
+#TOC {
+  background: var(--white);
+  border: none;
+  border-left: 4px solid var(--teal);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+  font-size: 0.88em;
+}
+
+#TOC ul { padding-left: 14px; }
+#TOC li { margin: 4px 0; }
+#TOC a  { color: var(--navy-mid); text-decoration: none; font-weight: 400; }
+#TOC a:hover { color: var(--teal); font-weight: 600; }
+#TOC .active > a { color: var(--teal); font-weight: 700; }
+
+/* ── HEADINGS ────────────────────────────────────────── */
+h1, h2, h3 {
+  font-family: 'Playfair Display', serif;
+  color: var(--navy);
+}
+
+h1.title {
+  display: none; /* replaced by hero */
+}
+
+h2 {
+  font-size: 1.65em;
+  font-weight: 700;
+  border-bottom: 3px solid var(--gold);
+  padding-bottom: 10px;
+  margin-top: 48px;
+}
+
+h3 {
+  font-size: 1.25em;
+  font-weight: 700;
+  color: var(--teal);
+  margin-top: 32px;
+}
+
+/* ── SECTION CARDS ───────────────────────────────────── */
+.section-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 32px 36px;
+  margin: 28px 0;
+  box-shadow: var(--shadow-sm);
+  border-top: 4px solid var(--teal);
+  transition: box-shadow 0.25s;
+}
+
+.section-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.section-card.gold-top {
+  border-top-color: var(--gold);
+}
+
+.section-card.navy-top {
+  border-top-color: var(--navy);
+}
+
+/* ── CALLOUT BOXES ───────────────────────────────────── */
+.callout {
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  margin: 20px 0;
+  font-size: 0.95em;
+  line-height: 1.65;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.callout-icon {
+  font-size: 1.3em;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.callout.info {
+  background: #e8f4fd;
+  border-left: 5px solid #3498db;
+  color: #1a3a5c;
+}
+
+.callout.success {
+  background: #eafaf1;
+  border-left: 5px solid #2ecc71;
+  color: #1a4a2e;
+}
+
+.callout.warning {
+  background: #fef9e7;
+  border-left: 5px solid var(--gold);
+  color: #5a3e00;
+}
+
+.callout.result {
+  background: linear-gradient(135deg, #e8f8f5, #d5f5e3);
+  border-left: 5px solid var(--teal);
+  color: #0d3d2e;
+  font-weight: 500;
+}
+
+/* ── STAT GRID ───────────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+  margin: 24px 0;
+}
+
+.stat-box {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+  color: var(--white);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.2s;
+}
+
+.stat-box:hover { transform: translateY(-3px); }
+
+.stat-box.teal {
+  background: linear-gradient(135deg, var(--teal) 0%, #0a5a4e 100%);
+}
+
+.stat-box.gold {
+  background: linear-gradient(135deg, var(--gold) 0%, #a07020 100%);
+}
+
+.stat-number {
+  font-family: 'Playfair Display', serif;
+  font-size: 2em;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stat-label {
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* ── FORMULA BOX ─────────────────────────────────────── */
+.formula-box {
+  background: var(--gray-soft);
+  border: 1px solid #ddd;
+  border-radius: var(--radius);
+  padding: 20px 28px;
+  margin: 20px 0;
+  text-align: center;
+  font-size: 1.05em;
+}
+
+.formula-label {
+  font-size: 0.8em;
+  color: var(--gray-mid);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+
+/* ── CODE ────────────────────────────────────────────── */
+pre, code {
+  font-family: 'Fira Code', monospace;
+}
+
+pre {
+  background: #1e2d40 !important;
+  border-radius: var(--radius) !important;
+  border: none !important;
+  padding: 18px 22px !important;
+}
+
+code {
+  background: rgba(15,123,108,0.1);
+  color: var(--teal);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.88em;
+}
+
+pre code {
+  background: transparent;
+  color: #e8f0f7;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+/* ── TABLE ───────────────────────────────────────────── */
+.dataTable thead {
+  background: var(--navy) !important;
+  color: var(--white) !important;
+}
+
+.dataTable thead th {
+  font-family: 'Source Sans 3', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  font-size: 0.88em;
+  text-transform: uppercase;
+  border: none !important;
+}
+
+.dataTable tbody tr:nth-child(even) {
+  background: #f0f8f6 !important;
+}
+
+.dataTable tbody tr:hover {
+  background: #d5f0eb !important;
+}
+
+/* ── ANALYSIS HEADER ─────────────────────────────────── */
+.analysis-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.analysis-number {
+  background: var(--navy);
+  color: var(--gold-light);
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5em;
+  font-weight: 900;
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.analysis-title-block h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.2em;
+}
+
+.analysis-title-block p {
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--gray-mid);
+}
+
+/* ── DIVIDER ─────────────────────────────────────────── */
+.section-divider {
+  border: none;
+  height: 2px;
+  background: linear-gradient(90deg, var(--teal), var(--gold), transparent);
+  margin: 40px 0;
+  border-radius: 2px;
+}
+
+/* ── INTERPRETATION ──────────────────────────────────── */
+.interpretation {
+  background: linear-gradient(135deg, #fafefe 0%, #f0faf8 100%);
+  border: 1px solid #b8e8e0;
+  border-radius: var(--radius);
+  padding: 22px 26px;
+  margin-top: 20px;
+}
+
+.interpretation h4 {
+  font-family: 'Playfair Display', serif;
+  color: var(--teal);
+  margin: 0 0 12px 0;
+  font-size: 1.05em;
+}
+
+.interpretation p { margin: 0; font-size: 0.95em; }
+
+/* ── FOOTER ──────────────────────────────────────────── */
+.report-footer {
+  background: var(--navy);
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+  padding: 28px;
+  margin: 50px -24px -24px -24px;
+  font-size: 0.85em;
+  border-top: 3px solid var(--gold);
+}
+
+.report-footer span { color: var(--gold-light); font-weight: 600; }
+
+/* ── RESPONSIVE ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hero-banner { padding: 40px 24px; }
+  .hero-title  { font-size: 2em; }
+  .stat-grid   { grid-template-columns: repeat(2, 1fr); }
+  .section-card { padding: 22px 20px; }
+}
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  fig.width = 9,
+  fig.height = 5.5,
+  dpi = 150
+)
+```
+
+```{r libraries, include=FALSE}
+library(ggplot2)
+library(DBI)
+library(RMySQL)
+library(dplyr)
+library(scales)
+library(tidyr)
+```
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--                     HERO BANNER                        -->
+<!-- ══════════════════════════════════════════════════════ -->
+
+<div class="hero-banner">
+  <div class="hero-title">Analisis <span>Database Sakila</span></div>
+  <div class="hero-subtitle">Eksplorasi, Visualisasi & Uji Statistik Data Rental Film</div>
+  <div class="hero-meta">
+  </div>
+</div>
+
+---
+
+# Pendahuluan
+
+<div class="section-card navy-top">
+
+**Database Sakila** adalah database contoh (*sample database*) yang disediakan secara resmi oleh MySQL. Database ini mensimulasikan sistem manajemen toko penyewaan film DVD dengan struktur data yang lengkap dan realistis.
+
+Laporan ini menyajikan **9 analisis utama** yang mencakup:
+
+- 🎬 Analisis konten dan katalog film
+- 👥 Analisis profil dan perilaku pelanggan  
+- 💰 Analisis pendapatan dan transaksi
+- 👨‍💼 Analisis performa staf dan toko
+
+</div>
+
+```{r koneksi, include=FALSE}
+con <- DBI::dbConnect(odbc::odbc(),
+                      Driver   = "MySQL ODBC 8.0 ANSI Driver",
+                      Server   = "127.0.0.1",
+                      Database = "sakila",
+                      UID      = "root",
+                      PWD      = "yashinta45",
+                      Port     = 3300)
+```
+
+```{r load-data, include=FALSE}
+film         <- dbGetQuery(con, "SELECT * FROM film")
+payment      <- dbGetQuery(con, "SELECT * FROM payment")
+customer     <- dbGetQuery(con, "SELECT * FROM customer")
+rental       <- dbGetQuery(con, "SELECT * FROM rental")
+staff        <- dbGetQuery(con, "SELECT * FROM staff")
+inventory    <- dbGetQuery(con, "SELECT * FROM inventory")
+category     <- dbGetQuery(con, "SELECT * FROM category")
+film_cat     <- dbGetQuery(con, "SELECT * FROM film_category")
+```
+
+---
+
+# Statistika Deskriptif {#statistika-deskriptif}
+
+## Tabel Film
+
+<div class="section-card">
+
+Variabel numerik utama pada tabel `film`:
+
+```{r stat-film}
+summary(film[, c("rental_duration","rental_rate","length","replacement_cost")])
+```
+
+**Distribusi rating film:**
+
+```{r stat-rating}
+as.data.frame(table(Rating = film$rating))
+```
+
+</div>
+
+## Tabel Payment
+
+<div class="section-card gold-top">
+
+```{r stat-payment}
+cat("Statistika Deskriptif Amount:\n")
+print(summary(payment$amount))
+cat("Standar Deviasi  :", round(sd(payment$amount), 4))
+cat("Total Transaksi  :", nrow(payment))
+cat("Total Revenue    : $", formatC(sum(payment$amount),
+    format = "f", digits = 2, big.mark = ","))
+```
+
+</div>
+
+## Tabel Customer
+
+<div class="section-card">
+
+```{r stat-customer}
+cat("Total Pelanggan :", nrow(customer))
+cat("Aktif           :", sum(customer$active == 1))
+cat("Tidak Aktif     :", sum(customer$active == 0))
+cat("% Aktif         :", round(mean(customer$active==1)*100, 2), "%\n\n")
+print(as.data.frame(table(Store = customer$store_id)))
+```
+
+</div>
+
+## Tabel Rental & Inventori
+
+<div class="section-card navy-top">
+
+```{r stat-rental}
+cat("Total Transaksi Rental        :", nrow(rental))
+cat("Rental belum dikembalikan     :", sum(is.na(rental$return_date)))
+cat("Total Item Inventori          :", nrow(inventory))
+cat("Distribusi Inventori per Store:\n")
+print(as.data.frame(table(Store = inventory$store_id)))
+```
+
+</div>
+
+---
+
+# Analisis & Visualisasi {#analisis}
+
+<hr class="section-divider">
+
+## Distribusi Rating Film {#analisis-1}
+
+<div class="analysis-header">
+  <div class="analysis-number">1</div>
+  <div class="analysis-title-block">
+    Distribusi Rating Film
+    Proporsi jumlah film berdasarkan kategori rating MPAA
+  </div>
+</div>
+
+<div class="section-card">
+
+<div class="callout info">
+  <span class="callout-icon">ℹ️</span>
+  <div>Rating film menggunakan standar MPAA: <strong>G</strong> (semua usia), <strong>PG</strong> (bimbingan orang tua), <strong>PG-13</strong> (usia 13+), <strong>R</strong> (dewasa), dan <strong>NC-17</strong> (18+).</div>
+</div>
+
+```{r analisis-1-data}
+rating_data <- dbGetQuery(con, "
+  SELECT rating, COUNT(*) AS jumlah_film
+  FROM film GROUP BY rating ORDER BY jumlah_film DESC")
+
+rating_data$persen <- round(rating_data$jumlah_film /
+                            sum(rating_data$jumlah_film) * 100, 2)
+rating_data
+```
+
+```{r analisis-1-plot, fig.height=6}
+ggplot(rating_data, aes(x = "", y = jumlah_film, fill = rating)) +
+  geom_bar(stat = "identity", width = 1, color = "white", linewidth = 0.8) +
+  coord_polar(theta = "y", start = 0) +
+  scale_fill_manual(values = c("G"     = "#0f7b6c",
+                               "PG"    = "#c8922a",
+                               "PG-13" = "#0d1b2a",
+                               "R"     = "#c0392b",
+                               "NC-17" = "#7d3c98")) +
+  labs(title    = "Distribusi Rating Film di Database Sakila",
+       subtitle = "Proporsi jumlah film per kategori rating MPAA",
+       fill = "Rating",
+       caption = "Sumber: Database Sakila") +
+  theme_void(base_size = 13) +
+  theme(plot.title    = element_text(face = "bold", hjust = 0.5,
+                                     size = 14, family = "serif"),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray50",
+                                     margin = margin(b = 10)),
+        plot.caption  = element_text(color = "gray60", size = 9),
+        legend.position = "right")
+```
+
+<div class="interpretation">
+<h4>📝 Interpretasi</h4>
+<p>
+Rating <strong>`r rating_data$rating[1]`</strong> mendominasi dengan <strong>`r rating_data$jumlah_film[1]` film (`r rating_data$persen[1]`%)</strong>, sementara rating terkecil adalah <strong>`r rating_data$rating[nrow(rating_data)]`</strong> dengan <strong>`r rating_data$jumlah_film[nrow(rating_data)]` film (`r rating_data$persen[nrow(rating_data)]`%)</strong>. Distribusi antar rating tergolong cukup merata, menunjukkan bahwa toko menyediakan variasi konten yang menjangkau berbagai segmen penonton.
+</p>
+</div>
+
+</div>
+
+<hr class="section-divider">
+
+## Panjang Film per Rating {#analisis-2}
+
+<div class="analysis-header">
+  <div class="analysis-number">2</div>
+  <div class="analysis-title-block">
+    Panjang Film per Rating
+    Uji perbedaan durasi film antar kategori rating
+  </div>
+</div>
+
+<div class="section-card">
+
+### Hipotesis
+
+<div class="formula-box">
+  <div class="formula-label">Hipotesis Uji Kruskal-Wallis</div>
+  $$H_0: \text{Tidak terdapat perbedaan distribusi panjang film antar kelompok rating}$$
+  $$H_1: \text{Terdapat perbedaan distribusi panjang film minimal pada satu kelompok rating}$$
+  $$\alpha = 0.05$$
+</div>
+
+### Statistika Deskriptif per Rating
+
+```{r analisis-2-desc}
+film_length <- dbGetQuery(con, "
+  SELECT rating, length FROM film WHERE length IS NOT NULL")
+
+desc_length <- film_length %>%
+  group_by(rating) %>%
+  summarise(
+    n            = n(),
+    `Rata-rata`  = round(mean(length), 2),
+    Median       = median(length),
+    `Std. Dev`   = round(sd(length), 2),
+    Min          = min(length),
+    Max          = max(length),
+    .groups = "drop"
+  )
+desc_length
+```
+
+### Uji Kruskal-Wallis
+
+```{r analisis-2-uji}
+kw_test <- kruskal.test(length ~ rating, data = film_length)
+print(kw_test)
+```
+
+<div class="formula-box">
+  <div class="formula-label">Statistik Uji Kruskal-Wallis</div>
+  $$H = \frac{12}{N(N+1)} \sum_{j=1}^{k} \frac{R_j^2}{n_j} - 3(N+1)$$
+  <small style="color:#888">di mana $N$ = total observasi, $k$ = jumlah kelompok, $R_j$ = jumlah rank kelompok $j$, $n_j$ = ukuran kelompok $j$</small>
+</div>
+
+```{r analisis-2-result, echo=FALSE}
+if (kw_test$p.value < 0.05) {
+  cat("KESIMPULAN: p-value =", round(kw_test$p.value, 4),
+      "< 0.05 → Tolak H₀\n",
+      "Terdapat perbedaan signifikan panjang film antar rating.")
+} else {
+  cat("KESIMPULAN: p-value =", round(kw_test$p.value, 4),
+      ">= 0.05 → Gagal Tolak H₀\n",
+      "Tidak ada perbedaan signifikan panjang film antar rating.")
+}
+```
+
+## Top 10 Kategori Film {#analisis-3}
+
+<div class="analysis-header">
+  <div class="analysis-number">3</div>
+  <div class="analysis-title-block">
+    Top 10 Kategori Film Terbanyak
+    Kategori genre dengan jumlah film terbanyak dalam katalog
+  </div>
+</div>
+
+<div class="section-card gold-top">
+
+```{r analisis-3-data}
+kategori_data <- dbGetQuery(con, "
+  SELECT c.name AS kategori, COUNT(fc.film_id) AS jumlah_film
+  FROM category c
+  JOIN film_category fc ON c.category_id = fc.category_id
+  GROUP BY c.name ORDER BY jumlah_film DESC LIMIT 10")
+kategori_data
+```
+
+```{r analisis-3-plot}
+ggplot(kategori_data, aes(x = reorder(kategori, jumlah_film),
+                          y = jumlah_film, fill = jumlah_film)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  geom_text(aes(label = jumlah_film), hjust = -0.3,
+            size = 3.8, fontface = "bold", color = "#1a1a2e") +
+  coord_flip() +
+  scale_fill_gradient(low = "#a8d5e2", high = "#0d1b2a") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  labs(title   = "Top 10 Kategori Film Terbanyak",
+       subtitle = "Berdasarkan jumlah film per kategori genre",
+       x = NULL, y = "Jumlah Film",
+       caption = "Sumber: Database Sakila") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title    = element_text(face = "bold", hjust = 0.5,
+                                     family = "serif", size = 14),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray50"),
+        panel.grid.major.y = element_blank(),
+        legend.position = "none")
+```
+
+<div class="interpretation">
+<h4>📝 Interpretasi</h4>
+<p>Kategori <strong>`r kategori_data$kategori[1]`</strong> menduduki posisi teratas dengan <strong>`r kategori_data$jumlah_film[1]` film</strong>, diikuti oleh <strong>`r kategori_data$kategori[2]`</strong> dengan <strong>`r kategori_data$jumlah_film[2]` film</strong> dan <strong>`r kategori_data$kategori[3]`</strong> dengan <strong>`r kategori_data$jumlah_film[3]` film</strong>. Dominasi kategori-kategori ini menunjukkan preferensi kurator toko dalam membangun koleksi yang berorientasi pada genre populer.</p>
+</div>
+
+</div>
+
+<hr class="section-divider">
+
+## Pelanggan Aktif vs Tidak Aktif per Store {#analisis-4}
+
+<div class="analysis-header">
+  <div class="analysis-number">4</div>
+  <div class="analysis-title-block">
+    Pelanggan Aktif vs Tidak Aktif per Store
+    Uji perbedaan proporsi keaktifan pelanggan antar toko
+  </div>
+</div>
+
+<div class="section-card">
+
+### Hipotesis
+
+<div class="formula-box">
+  <div class="formula-label">Hipotesis Uji Chi-Square</div>
+  $$H_0: \text{Tidak ada hubungan antara store dan status keaktifan pelanggan}$$
+  $$H_1: \text{Terdapat hubungan antara store dan status keaktifan pelanggan}$$
+  $$\alpha = 0.05$$
+</div>
+
+### Data Pelanggan per Store
+
+```{r analisis-4-data}
+aktif_store <- dbGetQuery(con, "
+  SELECT store_id,
+         SUM(active = 1) AS aktif,
+         SUM(active = 0) AS tidak_aktif,
+         COUNT(*)        AS total
+  FROM customer GROUP BY store_id")
+
+aktif_store$pct_aktif <- round(aktif_store$aktif /
+                               aktif_store$total * 100, 2)
+aktif_store
+```
+
+### Uji Chi-Square
+
+```{r analisis-4-uji}
+tabel_chi <- matrix(c(aktif_store$aktif, aktif_store$tidak_aktif),
+                    nrow = 2, byrow = TRUE)
+chi_test  <- chisq.test(tabel_chi)
+print(chi_test)
+```
+
+<div class="formula-box">
+  <div class="formula-label">Statistik Uji Chi-Square</div>
+  $$\chi^2 = \sum_{i=1}^{r}\sum_{j=1}^{c} \frac{(O_{ij} - E_{ij})^2}{E_{ij}}$$
+  <small style="color:#888">di mana $O_{ij}$ = frekuensi observasi, $E_{ij}$ = frekuensi ekspektasi pada baris $i$ kolom $j$</small>
+</div>
+
+```{r analisis-4-plot}
+aktif_long <- aktif_store %>%
+  select(store_id, aktif, tidak_aktif) %>%
+  pivot_longer(cols = c(aktif, tidak_aktif),
+               names_to = "status", values_to = "jumlah") %>%
+  mutate(status      = ifelse(status == "aktif", "Aktif", "Tidak Aktif"),
+         store_label = paste("Store", store_id))
+
+ggplot(aktif_long, aes(x = store_label, y = jumlah, fill = status)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.6) +
+  geom_text(aes(label = jumlah),
+            position = position_dodge(width = 0.6),
+            vjust = -0.5, size = 4, fontface = "bold") +
+  scale_fill_manual(values = c("Aktif"       = "#0f7b6c",
+                               "Tidak Aktif" = "#c0392b")) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  labs(title    = "Pelanggan Aktif vs Tidak Aktif per Store",
+       subtitle = paste0("Uji Chi-Square: \u03c7\u00b2 = ",
+                         round(chi_test$statistic, 4),
+                         ", p-value = ", round(chi_test$p.value, 4)),
+       x = NULL, y = "Jumlah Pelanggan", fill = "Status",
+       caption = "Sumber: Database Sakila") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title    = element_text(face = "bold", hjust = 0.5,
+                                     family = "serif", size = 14),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray50"),
+        panel.grid.major.x = element_blank())
+```
+
+<div class="callout result">
+  <span class="callout-icon">📊</span>
+  <div>
+    Karena p-value `r if(chi_test$p.value < 0.05) "< 0.05, maka H₀ ditolak, artinya terdapat perbedaan signifikan proporsi keaktifan pelanggan antar toko." else ">= 0.05, maka H₀ gagal ditolak, artinya tidak terdapat perbedaan signifikan proporsi keaktifan pelanggan antar toko."`
+  </div>
+</div>
+
+</div>
+
+<hr class="section-divider">
+
+## Top 15 Negara Asal Pelanggan {#analisis-5}
+
+<div class="analysis-header">
+  <div class="analysis-number">5</div>
+  <div class="analysis-title-block">
+    Top 15 Negara Asal Pelanggan
+    Distribusi geografis pelanggan berdasarkan negara
+  </div>
+</div>
+
+<div class="section-card gold-top">
+
+```{r analisis-5-data}
+negara_data <- dbGetQuery(con, "
+  SELECT co.country, COUNT(cu.customer_id) AS jumlah_pelanggan
+  FROM customer cu
+  JOIN address  a  ON cu.address_id = a.address_id
+  JOIN city     ci ON a.city_id     = ci.city_id
+  JOIN country  co ON ci.country_id = co.country_id
+  GROUP BY co.country ORDER BY jumlah_pelanggan DESC LIMIT 15")
+negara_data
+```
+
+```{r analisis-5-plot, fig.height=6.5}
+ggplot(negara_data, aes(x = reorder(country, jumlah_pelanggan),
+                        y = jumlah_pelanggan, fill = jumlah_pelanggan)) +
+  geom_bar(stat = "identity", width = 0.72) +
+  geom_text(aes(label = jumlah_pelanggan), hjust = -0.3,
+            size = 3.5, fontface = "bold", color = "#1a1a2e") +
+  coord_flip() +
+  scale_fill_gradient(low = "#f9ca74", high = "#c8390a") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  labs(title    = "Top 15 Negara Asal Pelanggan",
+       subtitle = "Berdasarkan jumlah pelanggan terdaftar per negara",
+       x = NULL, y = "Jumlah Pelanggan",
+       caption = "Sumber: Database Sakila") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title    = element_text(face = "bold", hjust = 0.5,
+                                     family = "serif", size = 14),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray50"),
+        panel.grid.major.y = element_blank(),
+        legend.position = "none")
+```
+
+<div class="interpretation">
+<h4>📝 Interpretasi</h4>
+<p>Negara dengan pelanggan terbanyak adalah <strong>`r negara_data$country[1]`</strong> dengan <strong>`r negara_data$jumlah_pelanggan[1]` pelanggan</strong>. Hal ini menunjukkan bahwa basis pelanggan tersebar secara global, mencerminkan jangkauan internasional dari sistem simulasi toko film ini.</p>
+</div>
+
+</div>
+
+<hr class="section-divider">
+
+## Total Pendapatan per Store {#analisis-6}
+
+<div class="analysis-header">
+  <div class="analysis-number">6</div>
+  <div class="analysis-title-block">
+    Total Pendapatan per Store
+    Perbandingan revenue antar toko dengan uji t independen
+  </div>
+</div>
+
+<div class="section-card">
+
+### Hipotesis
+
+<div class="formula-box">
+  <div class="formula-label">Hipotesis Uji T Dua Sampel Independen</div>
+  $$H_0: \mu_1 = \mu_2 \quad \text{(tidak ada perbedaan rata-rata nilai transaksi antar toko)}$$
+  $$H_1: \mu_1 \neq \mu_2 \quad \text{(terdapat perbedaan rata-rata nilai transaksi antar toko)}$$
+  $$\alpha = 0.05$$
+</div>
+
+### Ringkasan Revenue per Store
+
+```{r analisis-6-data}
+revenue_store <- dbGetQuery(con, "
+  SELECT s.store_id,
+         COUNT(p.payment_id) AS total_transaksi,
+         SUM(p.amount)       AS total_revenue,
+         AVG(p.amount)       AS rata_rata,
+         MIN(p.amount)       AS minimum,
+         MAX(p.amount)       AS maksimum
+  FROM payment p JOIN staff s ON p.staff_id = s.staff_id
+  GROUP BY s.store_id")
+revenue_store
+```
+
+### Uji T-Test Independen
+
+```{r analisis-6-uji}
+pay_store <- dbGetQuery(con, "
+  SELECT s.store_id, p.amount
+  FROM payment p JOIN staff s ON p.staff_id = s.staff_id")
+
+t_test <- t.test(amount ~ store_id, data = pay_store)
+print(t_test)
+```
+
+<div class="formula-box">
+  <div class="formula-label">Statistik Uji T Welch</div>
+  $$t = \frac{\bar{X}_1 - \bar{X}_2}{\sqrt{\dfrac{s_1^2}{n_1} + \dfrac{s_2^2}{n_2}}}$$
+  <small style="color:#888">di mana $\bar{X}$ = rata-rata sampel, $s^2$ = variansi sampel, $n$ = ukuran sampel</small>
+</div>
+
+```{r analisis-6-plot}
+revenue_store$store_label <- paste("Store", revenue_store$store_id)
+
+ggplot(revenue_store, aes(x = store_label, y = total_revenue,
+                          fill = store_label)) +
+  geom_bar(stat = "identity", width = 0.5) +
+  geom_text(aes(label = paste0("$", formatC(total_revenue,
+                format = "f", digits = 2, big.mark = ","))),
+            vjust = -0.5, size = 4.2, fontface = "bold") +
+  scale_fill_manual(values = c("Store 1" = "#0d1b2a",
+                               "Store 2" = "#c8922a")) +
+  scale_y_continuous(labels = dollar_format(),
+                     expand = expansion(mult = c(0, 0.15))) +
+  labs(title    = "Total Pendapatan per Store",
+       subtitle = paste0("Uji T-Test Welch: t = ",
+                         round(t_test$statistic, 4),
+                         ", p-value = ", round(t_test$p.value, 4)),
+       x = NULL, y = "Total Revenue (USD)",
+       caption = "Sumber: Database Sakila") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title    = element_text(face = "bold", hjust = 0.5,
+                                     family = "serif", size = 14),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray50"),
+        panel.grid.major.x = element_blank(),
+        legend.position = "none")
+```
+
+<div class="callout result">
+  <span class="callout-icon">📊</span>
+  <div>
+    Karena p-value `r if(t_test$p.value < 0.05) "< 0.05, maka H₀ ditolak, artinya terdapat perbedaan signifikan rata-rata nilai transaksi antara Store 1 dan Store 2." else ">= 0.05, maka H₀ gagal ditolak, artinya tidak terdapat perbedaan signifikan rata-rata nilai transaksi antara kedua toko."`
+  </div>
+</div>
+
+</div>
+
+<hr class="section-divider">
+
+## Trend Pendapatan Bulanan {#analisis-7}
+
+<div class="analysis-header">
+  <div class="analysis-number">7</div>
+  <div class="analysis-title-block">
+    Trend Pendapatan Bulanan
+    Pola revenue dari waktu ke waktu berdasarkan data payment
+  </div>
+</div>
+
+<div class="section-card gold-top">
+
+```{r analisis-7-data}
+trend_bulanan <- dbGetQuery(con, "
+  SELECT DATE_FORMAT(payment_date, '%Y-%m') AS bulan,
+         COUNT(*)    AS total_transaksi,
+         SUM(amount) AS total_revenue,
+         AVG(amount) AS rata_rata
+  FROM payment GROUP BY bulan ORDER BY bulan")
+
+trend_bulanan$bulan <- as.Date(paste0(trend_bulanan$bulan, "-01"))
+trend_bulanan
+```
+
+```{r analisis-12-info, echo=FALSE}
+bln_max <- trend_bulanan[which.max(trend_bulanan$total_revenue), ]
+bln_min <- trend_bulanan[which.min(trend_bulanan$total_revenue), ]
+```
+
+<div class="callout warning">
+  <span class="callout-icon">📅</span>
+  <div>
+    Pendapatan tertinggi terjadi pada `r format(bln_max$bulan, "%B %Y")` senilai $`r formatC(bln_max$total_revenue, format="f", digits=2, big.mark=",")` dengan `r bln_max$total_transaksi` transaksi.
+    Pendapatan terendah terjadi pada `r format(bln_min$bulan, "%B %Y")` senilai $`r formatC(bln_min$total_revenue, format="f", digits=2, big.mark=",")`.
+  </div>
+</div>
+
+```{r analisis-7-plot, fig.width=10}
+ggplot(trend_bulanan, aes(x = bulan, y = total_revenue)) +
+  geom_area(fill = "#a8d8ea", alpha = 0.45) +
+  geom_line(color = "#0d1b2a", linewidth = 1.4) +
+  geom_point(color = "#c8922a", size = 3.5) +
+  geom_text(aes(label = paste0("$", round(total_revenue, 0))),
+            vjust = -0.9, size = 3, color = "#333344") +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  scale_y_continuous(labels  = dollar_format(),
+                     expand  = expansion(mult = c(0, 0.2))) +
+  labs(title    = "Trend Pendapatan Bulanan",
+       subtitle = "Total revenue per bulan dari seluruh transaksi pembayaran",
+       x = "Bulan", y = "Total Pendapatan (USD)",
+       caption = "Sumber: Database Sakila") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title    = element_text(face = "bold", hjust = 0.5,
+                                     family = "serif", size = 14),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray50"),
+        axis.text.x   = element_text(angle = 45, hjust = 1),
+        panel.grid.minor = element_blank())
+```
+
+</div>
+
+<hr class="section-divider">
+
+## Pendapatan per Kategori Film {#analisis-8}
+
+<div class="analysis-header">
+  <div class="analysis-number">8</div>
+  <div class="analysis-title-block">
+    Pendapatan per Kategori Film
+    Kontribusi revenue dari setiap genre film
+  </div>
+</div>
+
+<div class="section-card">
+
+```{r analisis-8-data}
+rev_kategori <- dbGetQuery(con, "
+  SELECT c.name AS kategori,
+         COUNT(p.payment_id) AS total_transaksi,
+         SUM(p.amount)       AS total_revenue,
+         AVG(p.amount)       AS rata_rata
+  FROM payment       p
+  JOIN rental        r  ON p.rental_id    = r.rental_id
+  JOIN inventory     i  ON r.inventory_id = i.inventory_id
+  JOIN film_category fc ON i.film_id      = fc.film_id
+  JOIN category      c  ON fc.category_id = c.category_id
+  GROUP BY c.name ORDER BY total_revenue DESC")
+rev_kategori
+```
+
+```{r analisis-8-plot, fig.height=6.5}
+ggplot(rev_kategori, aes(x = reorder(kategori, total_revenue),
+                         y = total_revenue, fill = total_revenue)) +
+  geom_bar(stat = "identity", width = 0.72) +
+  geom_text(aes(label = paste0("$", round(total_revenue, 0))),
+            hjust = -0.12, size = 3.3, fontface = "bold",
+            color = "#1a1a2e") +
+  coord_flip() +
+  scale_fill_gradient(low = "#b8e8d8", high = "#0d4a3a") +
+  scale_y_continuous(labels = dollar_format(),
+                     expand = expansion(mult = c(0, 0.18))) +
+  labs(title    = "Total Pendapatan per Kategori Film",
+       subtitle = "Kategori genre mana yang paling menguntungkan?",
+       x = NULL, y = "Total Pendapatan (USD)",
+       caption = "Sumber: Database Sakila") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title    = element_text(face = "bold", hjust = 0.5,
+                                     family = "serif", size = 14),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray50"),
+        panel.grid.major.y = element_blank(),
+        legend.position = "none")
+```
+
+<div class="interpretation">
+<h4>📝 Interpretasi</h4>
+<p>Kategori <strong>`r rev_kategori$kategori[1]`</strong> menghasilkan revenue tertinggi senilai <strong>$`r formatC(rev_kategori$total_revenue[1], format="f", digits=2, big.mark=",")`</strong> dengan `r rev_kategori$total_transaksi[1]` transaksi. Di sisi lain, kategori <strong>`r rev_kategori$kategori[nrow(rev_kategori)]`</strong> menghasilkan revenue paling rendah senilai <strong>$`r formatC(rev_kategori$total_revenue[nrow(rev_kategori)], format="f", digits=2, big.mark=",")`</strong>. Perbedaan ini dapat menjadi acuan bagi manajemen dalam mengoptimalkan komposisi koleksi film.</p>
+</div>
+
+</div>
+
+<hr class="section-divider">
+
+## Nilai Transaksi per Staf {#analisis-9}
+
+<div class="analysis-header">
+  <div class="analysis-number">9</div>
+  <div class="analysis-title-block">
+    Nilai Transaksi per Staf
+    Uji perbedaan rata-rata nilai transaksi antar staf
+  </div>
+</div>
+
+<div class="section-card navy-top">
+
+### Hipotesis
+
+<div class="formula-box">
+  <div class="formula-label">Hipotesis Uji T Dua Sampel Independen</div>
+  $$H_0: \mu_{\text{staf}_1} = \mu_{\text{staf}_2} \quad \text{(tidak ada perbedaan rata-rata nilai transaksi antar staf)}$$
+  $$H_1: \mu_{\text{staf}_1} \neq \mu_{\text{staf}_2} \quad \text{(terdapat perbedaan rata-rata nilai transaksi antar staf)}$$
+  $$\alpha = 0.05$$
+</div>
+
+### Statistika Deskriptif per Staf
+
+```{r analisis-9-desc}
+transaksi_staf <- dbGetQuery(con, "
+  SELECT CONCAT(s.first_name, ' ', s.last_name) AS nama_staf,
+         s.store_id, p.amount
+  FROM payment p JOIN staff s ON p.staff_id = s.staff_id")
+
+desc_staf <- transaksi_staf %>%
+  group_by(nama_staf, store_id) %>%
+  summarise(
+    `Jumlah Transaksi` = n(),
+    `Rata-rata ($)`    = round(mean(amount), 4),
+    `Median ($)`       = round(median(amount), 4),
+    `Std. Dev ($)`     = round(sd(amount), 4),
+    `Min ($)`          = min(amount),
+    `Max ($)`          = max(amount),
+    .groups = "drop"
+  )
+desc_staf
+```
+
+### Uji T-Test Independen
+
+```{r analisis-9-uji}
+staf_names <- unique(transaksi_staf$nama_staf)
+grp1       <- transaksi_staf$amount[transaksi_staf$nama_staf == staf_names[1]]
+grp2       <- transaksi_staf$amount[transaksi_staf$nama_staf == staf_names[2]]
+t_staf     <- t.test(grp1, grp2)
+print(t_staf)
+```
+
+<div class="callout result">
+  <span class="callout-icon">📊</span>
+  <div>
+    Karena p-value `r if(t_staf$p.value < 0.05) "< 0.05, maka H₀ ditolak, artinya terdapat perbedaan signifikan rata-rata nilai transaksi antara kedua staf." else ">= 0.05, maka H₀ gagal ditolak, artinya tidak terdapat perbedaan signifikan rata-rata nilai transaksi antara kedua staf."`
+  </div>
+</div>
+
+</div>
+
+---
+
+# Kesimpulan {#kesimpulan}
+
+<div class="section-card gold-top">
+
+Berikut rangkuman hasil dari seluruh analisis yang telah dilakukan:
+
+| No | Analisis | Metode | Kesimpulan |
+|:-:|---|:---:|---|
+| 1 | Distribusi Rating Film | Deskriptif | Rating PG-13 mendominasi katalog |
+| 2 | Panjang Film per Rating | Kruskal-Wallis | Lihat hasil uji di atas |
+| 3 | Top 10 Kategori Film | Deskriptif | Sports menjadi kategori terbanyak |
+| 4 | Pelanggan Aktif per Store | Chi-Square | Lihat hasil uji di atas |
+| 5 | Distribusi Negara Pelanggan | Deskriptif | Pelanggan tersebar secara global |
+| 6 | Revenue per Store | T-Test | Lihat hasil uji di atas |
+| 7 | Trend Pendapatan Bulanan | Time Series | Revenue bervariasi per bulan |
+| 8 | Revenue per Kategori | Deskriptif | Sports menghasilkan revenue tertinggi |
+| 9 | Transaksi per Staf | T-Test | Lihat hasil uji di atas |
+
+</div>
+
+```{r tutup-koneksi, include=FALSE}
+dbDisconnect(con)
+```
+
+<!-- ══ FOOTER ══════════════════════════════════════════════ -->
+<div class="report-footer">
+  Laporan dibuat menggunakan <span>R Markdown</span> &nbsp;|&nbsp;
+  Database: <span>Sakila (MySQL)</span> &nbsp;|&nbsp;
+  Analisis: <span>ggplot2 · dplyr · scales</span>
+</div>
